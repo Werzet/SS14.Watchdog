@@ -3,6 +3,7 @@ using System.Runtime;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -14,84 +15,100 @@ using SS14.Watchdog.Configuration;
 
 namespace SS14.Watchdog
 {
-    public sealed class Startup
-    {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
+	public sealed class Startup
+	{
+		public Startup(IConfiguration configuration)
+		{
+			Configuration = configuration;
+		}
 
-        public IConfiguration Configuration { get; }
+		public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        [UsedImplicitly]
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.Configure<ServersConfiguration>(Configuration.GetSection("Servers"));
+		// This method gets called by the runtime. Use this method to add services to the container.
+		[UsedImplicitly]
+		public void ConfigureServices(IServiceCollection services)
+		{
+			services.Configure<ServersConfiguration>(Configuration.GetSection("Servers"));
 
-            services.AddControllers();
+			services.AddControllers();
 
-            services.AddSingleton<ServerManager>();
-            services.AddSingleton<IServerManager>(p => p.GetService<ServerManager>()!);
-            services.AddHostedService(p => p.GetService<ServerManager>());
+			services.AddSingleton<ServerManager>();
+			services.AddSingleton<IServerManager>(p => p.GetService<ServerManager>()!);
+			services.AddHostedService(p => p.GetRequiredService<ServerManager>());
 
-            services.AddSingleton<BackgroundTaskQueue>();
-            services.AddSingleton<IBackgroundTaskQueue>(p => p.GetService<BackgroundTaskQueue>()!);
-            services.AddHostedService(p => p.GetService<BackgroundTaskQueue>());
-        }
+			services.AddSingleton<BackgroundTaskQueue>();
+			services.AddSingleton<IBackgroundTaskQueue>(p => p.GetService<BackgroundTaskQueue>()!);
+			services.AddHostedService(p => p.GetRequiredService<BackgroundTaskQueue>());
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        [UsedImplicitly]
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+			services.AddSwaggerGen(opt =>
+			{
+				opt.CustomOperationIds(operationOpts =>
+				{
+					if (operationOpts.ActionDescriptor is ControllerActionDescriptor actionDescriptor)
+					{
+						return $"{actionDescriptor.ControllerName}_{actionDescriptor.ActionName}";
+					}
 
-            app.UseSerilogRequestLogging();
+					return null;
+				});
+			});
+		}
 
-            Log.ForContext<Startup>().Debug($"Using server GC: {GCSettings.IsServerGC}");
+		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+		[UsedImplicitly]
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+		{
+			if (env.IsDevelopment())
+			{
+				app.UseDeveloperExceptionPage();
 
-            // app.UseHttpsRedirection();
+				app.UseSwagger();
+				app.UseSwaggerUI();
+			}
 
-            // Mount binaries/ paths for all the server instances.
-            var serverManager = app.ApplicationServices.GetRequiredService<IServerManager>();
-            foreach (var instance in serverManager.Instances)
-            {
-                var dirPath = Path.Combine(instance.InstanceDir, "binaries");
+			app.UseSerilogRequestLogging();
 
-                if (!Directory.Exists(dirPath))
-                {
-                    Directory.CreateDirectory(dirPath);
-                }
+			Log.ForContext<Startup>().Debug($"Using server GC: {GCSettings.IsServerGC}");
 
-                var provider = new PhysicalFileProvider(dirPath);
-                var path = $"/instances/{instance.Key}/binaries";
+			// app.UseHttpsRedirection();
 
-                app.UseStaticFiles(new StaticFileOptions
-                {
-                    RequestPath = path,
-                    FileProvider = provider
-                });
+			// Mount binaries/ paths for all the server instances.
+			var serverManager = app.ApplicationServices.GetRequiredService<IServerManager>();
+			foreach (var instance in serverManager.Instances)
+			{
+				var dirPath = Path.Combine(instance.InstanceDir, "binaries");
 
-                if (env.IsDevelopment())
-                {
-                    app.UseDirectoryBrowser(new DirectoryBrowserOptions
-                    {
-                        FileProvider = provider,
-                        RequestPath = path
-                    });
-                }
-            }
+				if (!Directory.Exists(dirPath))
+				{
+					Directory.CreateDirectory(dirPath);
+				}
 
-            app.UseRouting();
+				var provider = new PhysicalFileProvider(dirPath);
+				var path = $"/instances/{instance.Key}/binaries";
 
-            app.UseAuthentication();
+				app.UseStaticFiles(new StaticFileOptions
+				{
+					RequestPath = path,
+					FileProvider = provider
+				});
 
-            app.UseAuthorization();
+				if (env.IsDevelopment())
+				{
+					app.UseDirectoryBrowser(new DirectoryBrowserOptions
+					{
+						FileProvider = provider,
+						RequestPath = path
+					});
+				}
+			}
 
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-        }
-    }
+			app.UseRouting();
+
+			app.UseAuthentication();
+
+			app.UseAuthorization();
+
+			app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+		}
+	}
 }
