@@ -95,44 +95,56 @@ namespace SS14.Watchdog.Components.ServerManagement
 						.GetSection($"Servers:Instances:{key}:Updates")
 						.Get<UpdateProviderJenkinsConfiguration>();
 
-					_updateProvider = new UpdateProviderJenkins(
-						jenkinsConfig, 
-						serviceProvider.GetRequiredService<ILogger<UpdateProviderJenkins>>());
-					break;
+                    if (jenkinsConfig == null)
+                        throw new InvalidOperationException("Invalid configuration!");
+                    
+                    _updateProvider = new UpdateProviderJenkins(
+                        jenkinsConfig, 
+                        serviceProvider.GetRequiredService<ILogger<UpdateProviderJenkins>>());
+                    break;
 
 				case "Local":
 					var localConfig = configuration
 						.GetSection($"Servers:Instances:{key}:Updates")
 						.Get<UpdateProviderLocalConfiguration>();
 
-					_updateProvider = new UpdateProviderLocal(
-						this,
-						localConfig, 
-						serviceProvider.GetRequiredService<ILogger<UpdateProviderLocal>>(),
-						configuration);
-					break;
-				
-				case "Git":
-					var gitConfig = configuration
-						.GetSection($"Servers:Instances:{key}:Updates")
-						.Get<UpdateProviderGitConfiguration>();
+                    if (localConfig == null)
+                        throw new InvalidOperationException("Invalid configuration!");
+                    
+                    _updateProvider = new UpdateProviderLocal(
+                        this,
+                        localConfig, 
+                        serviceProvider.GetRequiredService<ILogger<UpdateProviderLocal>>(),
+                        configuration);
+                    break;
+                
+                case "Git":
+                    var gitConfig = configuration
+                        .GetSection($"Servers:Instances:{key}:Updates")
+                        .Get<UpdateProviderGitConfiguration>();
 
-					_updateProvider = new UpdateProviderGit(
-						this,
-						gitConfig,
-						serviceProvider.GetRequiredService<ILogger<UpdateProviderGit>>(),
-						configuration);
-					break;
-				
-				case "Manifest":
-					var manifestConfig = configuration
-						.GetSection($"Servers:Instances:{key}:Updates")
-						.Get<UpdateProviderManifestConfiguration>();
+                    if (gitConfig == null)
+                        throw new InvalidOperationException("Invalid configuration!");
 
-					_updateProvider = new UpdateProviderManifest(
-						manifestConfig,
-						serviceProvider.GetRequiredService<ILogger<UpdateProviderManifest>>());
-					break;
+                    _updateProvider = new UpdateProviderGit(
+                        this,
+                        gitConfig,
+                        serviceProvider.GetRequiredService<ILogger<UpdateProviderGit>>(),
+                        configuration);
+                    break;
+                
+                case "Manifest":
+                    var manifestConfig = configuration
+                        .GetSection($"Servers:Instances:{key}:Updates")
+                        .Get<UpdateProviderManifestConfiguration>();
+                    
+                    if (manifestConfig == null)
+                        throw new InvalidOperationException("Invalid configuration!");
+
+                    _updateProvider = new UpdateProviderManifest(
+                        manifestConfig,
+                        serviceProvider.GetRequiredService<ILogger<UpdateProviderManifest>>());
+                    break;
 
 				case "Dummy":
 					_updateProvider = new UpdateProviderDummy();
@@ -367,11 +379,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 			}
 		}
 
-		private void GenerateNewToken()
-		{
-			Span<byte> raw = stackalloc byte[64];
-			using var crypto = new RNGCryptoServiceProvider();
-			crypto.GetBytes(raw);
+        private void GenerateNewToken()
+        {
+            Span<byte> raw = stackalloc byte[64];
+            RandomNumberGenerator.Fill(raw);
 
 			var token = Convert.ToBase64String(raw);
 			Secret = token;
@@ -424,7 +435,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 				_logger.LogTrace("Received ping from server.");
 				_lastPing = DateTime.Now;
 
-				// Т.к. ожидание тайм-аута процесса построено на ожидании, то процесс ожидания запускаем и не дожидаемся его.
+				// �.�. �������� ����-���� �������� ��������� �� ��������, �� ������� �������� ��������� � �� ���������� ���.
 				_ = StartTimeoutTimer();
 			}
 			finally
