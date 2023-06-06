@@ -472,7 +472,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 					try
 					{
-						var dumpFile = GetDumpFilePath();
+						var dumpFile = GetDumpFilePath(dumpType: null);
 						
 						var client = new DiagnosticsClient(_runningServerProcess.Id);
 						client.WriteDump(_instanceConfig.TimeoutDumpType, dumpFile);
@@ -495,12 +495,19 @@ namespace SS14.Watchdog.Components.ServerManagement
 			_runningServerProcess.Kill();
 		}
 
-		private string GetDumpFilePath()
+		private string GetDumpFilePath(Controllers.DumpType? dumpType)
 		{
 			var dumpDir = Path.Combine(InstanceDir, "dumps");
 			Directory.CreateDirectory(dumpDir);
+
+			var fileExt = dumpType switch
+			{
+				Controllers.DumpType.Trace => ".nettrace",
+				Controllers.DumpType.Gcdump => ".gcdump",
+				_ => string.Empty
+			};
 			
-			return Path.Combine(dumpDir, $"dump_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}");
+			return Path.Combine(dumpDir, $"dump_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}{fileExt}");
 		}
 
 		public void HandleUpdateCheck()
@@ -621,7 +628,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 				throw new Exception("Отсутствует запущенный процесс.");
 			}
 
-			var dumpFile = GetDumpFilePath();
+			var dumpFile = GetDumpFilePath(parameters.Type);
 
 			var startInfo = new ProcessStartInfo
 			{
@@ -629,8 +636,19 @@ namespace SS14.Watchdog.Components.ServerManagement
 				FileName = "dotnet-trace",
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
-				Arguments = $"collect --process-id {proc.Id} --duration {parameters.Duration:dd\\:hh\\:mm\\:ss} --output {dumpFile}",
+				Arguments = $"collect -p {proc.Id} -o {dumpFile}",
 			};
+
+			if (parameters.Type == Controllers.DumpType.Trace)
+			{
+				startInfo.FileName = "dotnet-trace";
+				startInfo.Arguments += $" --duration {parameters.Duration:dd\\:hh\\:mm\\:ss}";
+			}
+			else
+			{
+				startInfo.FileName = "dotnet-gcdump";
+				startInfo.Arguments += $" -t {parameters.Duration.TotalSeconds}";
+			}
 
 			Process? dumpProcess = null;
 
