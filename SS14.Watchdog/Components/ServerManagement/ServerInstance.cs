@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -623,9 +623,9 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 			if (proc == null || proc.HasExited)
 			{
-				_logger.LogError("{Key}: ошибка при создании дампа. Отсутствует запущенный процесс.", Key);
+				_logger.LogError("{Key}: РѕС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё РґР°РјРїР°. РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ Р·Р°РїСѓС‰РµРЅРЅС‹Р№ РїСЂРѕС†РµСЃСЃ.", Key);
 
-				throw new Exception("Отсутствует запущенный процесс.");
+				throw new Exception("РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ Р·Р°РїСѓС‰РµРЅРЅС‹Р№ РїСЂРѕС†РµСЃСЃ.");
 			}
 
 			var dumpFile = GetDumpFilePath(parameters.Type);
@@ -655,11 +655,11 @@ namespace SS14.Watchdog.Components.ServerManagement
 			{
 				dumpProcess = StartDumpProcess(dumpFile, startInfo);
 
-				_logger.LogInformation("{Key}: Процесс записи дампа запущен", Key);
+				_logger.LogInformation("{Key}: РџСЂРѕС†РµСЃСЃ Р·Р°РїРёСЃРё РґР°РјРїР° Р·Р°РїСѓС‰РµРЅ", Key);
 			}
 			catch (Exception exc) 
 			{
-				_logger.LogError(exc, "{Key}: Ошибка при записи дампа", Key);
+				_logger.LogError(exc, "{Key}: РћС€РёР±РєР° РїСЂРё Р·Р°РїРёСЃРё РґР°РјРїР°", Key);
 
 				dumpProcess?.Dispose();
 			}
@@ -667,7 +667,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 		private Process StartDumpProcess(string dumpFile, ProcessStartInfo startInfo)
 		{
-			Process? dumpProcess = Process.Start(startInfo) ?? throw new Exception("Не удалось запустить процесс.");
+			Process? dumpProcess = Process.Start(startInfo) ?? throw new Exception("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ.");
 
 			dumpProcess.WaitForExitAsync().ContinueWith(async task =>
 			{
@@ -675,18 +675,18 @@ namespace SS14.Watchdog.Components.ServerManagement
 				{
 					if (dumpProcess.ExitCode == 0)
 					{
-						_logger.LogInformation("{Key}: Дамп процесса записан в {DumpFilePath}", Key, dumpFile);
+						_logger.LogInformation("{Key}: Р”Р°РјРї РїСЂРѕС†РµСЃСЃР° Р·Р°РїРёСЃР°РЅ РІ {DumpFilePath}", Key, dumpFile);
 					}
 					else
 					{
 						var proccesOutput = await dumpProcess.StandardOutput.ReadToEndAsync();
 
-						_logger.LogInformation("{Key}: Ошибка процесса записи дампа {DumpFilePath}. {proccesOutput}", Key, dumpFile, proccesOutput);
+						_logger.LogInformation("{Key}: РћС€РёР±РєР° РїСЂРѕС†РµСЃСЃР° Р·Р°РїРёСЃРё РґР°РјРїР° {DumpFilePath}. {proccesOutput}", Key, dumpFile, proccesOutput);
 					}
 				}
 				catch (Exception exc)
 				{
-					_logger.LogError(exc, "{Key}: Ошибка при завершении процесса записи дампа", Key);
+					_logger.LogError(exc, "{Key}: РћС€РёР±РєР° РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїСЂРѕС†РµСЃСЃР° Р·Р°РїРёСЃРё РґР°РјРїР°", Key);
 				}
 				finally
 				{

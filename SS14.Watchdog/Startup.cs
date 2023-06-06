@@ -30,10 +30,12 @@ namespace SS14.Watchdog
 		{
 			services.Configure<ServersConfiguration>(Configuration.GetSection("Servers"));
 
-			services.AddControllers().AddJsonOptions(opt =>
-			{
-				opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-			});
+			services
+				.AddControllers()
+				.AddJsonOptions(opt =>
+				{
+					opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+				});
 
 			services.AddSingleton<ServerManager>();
 			services.AddSingleton<IServerManager>(p => p.GetService<ServerManager>()!);

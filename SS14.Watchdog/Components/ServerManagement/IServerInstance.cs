@@ -1,4 +1,4 @@
-using System.Threading;
+п»їusing System.Threading;
 using System.Threading.Tasks;
 using SS14.Watchdog.Controllers;
 
@@ -64,10 +64,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 		Task DoRestartCommandAsync(CancellationToken cancel = default);
 
 		/// <summary>
-		/// Создаёт дамп процесса.
+		/// РЎРѕР·РґР°С‘С‚ РґР°РјРї РїСЂРѕС†РµСЃСЃР°.
 		/// </summary>
-		/// <param name="parameters">Параметры создания дампа.</param>
-		/// <returns>Задание, после завершения которого будет сформирован дамп.</returns>
+		/// <param name="parameters">РџР°СЂР°РјРµС‚СЂС‹ СЃРѕР·РґР°РЅРёСЏ РґР°РјРїР°.</param>
+		/// <returns>Р—Р°РґР°РЅРёРµ, РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ РєРѕС‚РѕСЂРѕРіРѕ Р±СѓРґРµС‚ СЃС„РѕСЂРјРёСЂРѕРІР°РЅ РґР°РјРї.</returns>
 		void CreateDump(DumpParameters parameters);
 	}
 }
