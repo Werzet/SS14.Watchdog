@@ -633,7 +633,6 @@ namespace SS14.Watchdog.Components.ServerManagement
 			var startInfo = new ProcessStartInfo
 			{
 				WorkingDirectory = InstanceDir,
-				FileName = "dotnet-trace",
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				Arguments = $"collect -p {proc.Id} -o {dumpFile}",
