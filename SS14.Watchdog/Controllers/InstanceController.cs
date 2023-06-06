@@ -42,14 +42,14 @@ namespace SS14.Watchdog.Controllers
 		}
 
 		[HttpPost("dump")]
-		public async Task<IActionResult> Dump([FromHeader(Name = "Authorization")] string authorization, string key, [FromBody]DumpParameters parameters)
+		public IActionResult Dump([FromHeader(Name = "Authorization")] string authorization, string key, [FromBody]DumpParameters parameters)
 		{
 			if (!TryAuthorize(authorization, key, out var failure, out var instance))
 			{
 				return failure;
 			}
 
-			await instance.CreateDump(parameters);
+			instance.CreateDump(parameters);
 
 			return Ok();
 		}

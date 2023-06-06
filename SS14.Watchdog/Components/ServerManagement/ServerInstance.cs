@@ -610,7 +610,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 				})), cancel);
 		}
 
-		public async Task CreateDump(DumpParameters parameters)
+		public void CreateDump(DumpParameters parameters)
 		{
 			var proc = _runningServerProcess;
 
@@ -626,32 +626,63 @@ namespace SS14.Watchdog.Components.ServerManagement
 			var startInfo = new ProcessStartInfo
 			{
 				WorkingDirectory = InstanceDir,
-				FileName = Path.Combine(InstanceDir, _instanceConfig.RunCommand),
+				FileName = "dotnet-trace",
 				UseShellExecute = false,
-				ArgumentList =
-				{
-					"collect",
-					$"--process-id {proc.Id}",
-					$"--duration {parameters.Duration:dd:hh:mm:ss}",
-					$"--output {dumpFile}"
-
-				},
-				RedirectStandardError = true,
-				RedirectStandardOutput = true
+				RedirectStandardOutput = true,
+				Arguments = $"collect --process-id {proc.Id} --duration {parameters.Duration:dd\\:hh\\:mm\\:ss} --output {dumpFile}",
 			};
+
+			Process? dumpProcess = null;
 
 			try
 			{
-				var dumpProcess = Process.Start(startInfo) ?? throw new Exception("Не удалось запустить процесс.");
+				dumpProcess = StartDumpProcess(dumpFile, startInfo);
 
-				await dumpProcess.WaitForExitAsync();
-
-				_logger.LogInformation("{Key}: Дамп процесса записан в {DumpFilePath}", Key, dumpFile);
+				_logger.LogInformation("{Key}: Процесс записи дампа запущен", Key);
 			}
 			catch (Exception exc) 
 			{
 				_logger.LogError(exc, "{Key}: Ошибка при записи дампа", Key);
+
+				dumpProcess?.Dispose();
 			}
+		}
+
+		private Process StartDumpProcess(string dumpFile, ProcessStartInfo startInfo)
+		{
+			Process? dumpProcess = Process.Start(startInfo) ?? throw new Exception("Не удалось запустить процесс.");
+
+			dumpProcess.WaitForExitAsync().ContinueWith(async task =>
+			{
+				try
+				{
+					if (dumpProcess.ExitCode == 0)
+					{
+						_logger.LogInformation("{Key}: Дамп процесса записан в {DumpFilePath}", Key, dumpFile);
+					}
+					else
+					{
+						var proccesOutput = await dumpProcess.StandardOutput.ReadToEndAsync();
+
+						_logger.LogInformation("{Key}: Ошибка процесса записи дампа {DumpFilePath}. {proccesOutput}", Key, dumpFile, proccesOutput);
+					}
+				}
+				catch (Exception exc)
+				{
+					_logger.LogError(exc, "{Key}: Ошибка при завершении процесса записи дампа", Key);
+				}
+				finally
+				{
+					dumpProcess?.Dispose();
+				}
+			});
+
+			return dumpProcess;
+		}
+
+		private void DumpProcess_Exited(object? sender, EventArgs e)
+		{
+			throw new NotImplementedException();
 		}
 
 		[PublicAPI]

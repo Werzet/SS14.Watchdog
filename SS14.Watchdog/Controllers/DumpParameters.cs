@@ -4,5 +4,5 @@ namespace SS14.Watchdog.Controllers;
 
 public class DumpParameters
 {
-	public TimeSpan Duration { get; set; } = TimeSpan.FromSeconds(30);
+	public TimeSpan Duration { get; set; } = TimeSpan.FromSeconds(10);
 }
