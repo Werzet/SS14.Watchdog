@@ -1,17 +1,25 @@
-﻿namespace SS14.Watchdog.Controllers;
+﻿using System;
+
+namespace SS14.Watchdog.Controllers;
 
 /// <summary>
 /// Тип создаваемого дампа.
 /// </summary>
+[Flags]
 public enum DumpType
 {
 	/// <summary>
+	/// None.
+	/// </summary>
+	None = 0,
+
+	/// <summary>
 	/// dotnet-trace
 	/// </summary>
-	Trace = 0,
+	Trace = 1,
 
 	/// <summary>
 	/// dotnet-gcdump.
 	/// </summary>
-	Gcdump = 1,
+	Gcdump = 2,
 }

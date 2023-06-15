@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using SS14.Watchdog.Controllers;
 
@@ -40,7 +41,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		/// <summary>
 		///     Server has sent a ping to the watchdog confirming that it is, in fact, still alive.
 		/// </summary>
-		void PingReceived();
+		Task PingReceived();
 
 		/// <summary>
 		///     Check for update and inform game server of available update if there is one.
@@ -67,7 +68,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		/// Создаёт дамп процесса.
 		/// </summary>
 		/// <param name="parameters">Параметры создания дампа.</param>
-		/// <returns>Задание, после завершения которого будет сформирован дамп.</returns>
-		void CreateDump(DumpParameters parameters);
+		/// <returns>Процесс создания дампа.</returns>
+		Process? CreateDump(DumpParameters parameters);
 	}
 }

@@ -8,7 +8,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -408,7 +407,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 			}
 		}
 
-		public async void PingReceived()
+		public async Task PingReceived()
 		{
 			await _stateLock.WaitAsync();
 			try
@@ -416,7 +415,8 @@ namespace SS14.Watchdog.Components.ServerManagement
 				_logger.LogTrace("Received ping from server.");
 				_lastPing = DateTime.Now;
 
-				StartTimeoutTimer();
+				// Т.к. ожидание тайм-аута процесса построено на ожидании, то процесс ожидания запускаем и не дожидаемся его.
+				_ = StartTimeoutTimer();
 			}
 			finally
 			{
@@ -424,7 +424,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 			}
 		}
 
-		private async void StartTimeoutTimer()
+		private async Task StartTimeoutTimer()
 		{
 			_serverTimeoutTcs?.Cancel();
 
@@ -448,7 +448,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 			try
 			{
-				TimeoutKill();
+				await TimeoutKill();
 			}
 			finally
 			{
@@ -456,54 +456,62 @@ namespace SS14.Watchdog.Components.ServerManagement
 			}
 		}
 
-		private void TimeoutKill()
+		private async Task TimeoutKill()
 		{
 			_logger.LogWarning("{Key}: timed out, killing", Key);
 
 			if (_runningServerProcess == null)
 				return;
 			
-			if (_instanceConfig.DumpOnTimeout)
+			if (_instanceConfig.TimeoutDumpType.HasFlag(DumpType.Trace))
 			{
-				if (!OperatingSystem.IsWindows())
-				{
-					_logger.LogInformation("{Key}: making on-kill process dump of type {DumpType}", 
-					Key, _instanceConfig.TimeoutDumpType);
-
-					try
-					{
-						var dumpFile = GetDumpFilePath(dumpType: null);
-						
-						var client = new DiagnosticsClient(_runningServerProcess.Id);
-						client.WriteDump(_instanceConfig.TimeoutDumpType, dumpFile);
-
-						_logger.LogInformation("{Key}: Process dump written to {DumpFilePath}", Key, dumpFile);
-					}
-					catch (Exception e)
-					{
-						_logger.LogError(e, "{Key}: exception while making process dump", Key);
-					}
-				}
-				else
-				{
-					_logger.LogInformation("{Key}: not creating process dump: not supported on Windows", Key);
-				}
-
-				_logger.LogInformation("{Key}: killing process...", Key);
+				await ProcessDump(DumpType.Trace, TimeSpan.FromSeconds(_instanceConfig.TraceDumpDuration));
 			}
-			
+
+			if (_instanceConfig.TimeoutDumpType.HasFlag(DumpType.Gcdump))
+			{
+				await ProcessDump(DumpType.Gcdump, TimeSpan.FromSeconds(_instanceConfig.GcdumpDumpCreateTimeout));
+			}
+
+			if (_instanceConfig.TimeoutDumpType == DumpType.None)
+			{
+				_logger.LogWarning("{Key}: creating process dump disabled", Key);
+			}
+
+			_logger.LogInformation("{Key}: killing process...", Key);
 			_runningServerProcess.Kill();
 		}
 
-		private string GetDumpFilePath(Controllers.DumpType? dumpType)
+		public async Task ProcessDump(DumpType dumpType, TimeSpan duration)
+		{
+			try
+			{
+				var proc = CreateDump(new()
+				{
+					Duration = duration,
+					Type = dumpType,
+				});
+
+				if (proc != null)
+				{
+					await proc.WaitForExitAsync();
+				}
+			}
+			catch (Exception exc)
+			{
+				_logger.LogError(exc, "{Key}: exception while making process dump {Type}", Key, dumpType);
+			}
+		}
+
+		private string GetDumpFilePath(DumpType? dumpType)
 		{
 			var dumpDir = Path.Combine(InstanceDir, "dumps");
 			Directory.CreateDirectory(dumpDir);
 
 			var fileExt = dumpType switch
 			{
-				Controllers.DumpType.Trace => ".nettrace",
-				Controllers.DumpType.Gcdump => ".gcdump",
+				DumpType.Trace => ".nettrace",
+				DumpType.Gcdump => ".gcdump",
 				_ => string.Empty
 			};
 			
@@ -617,19 +625,41 @@ namespace SS14.Watchdog.Components.ServerManagement
 				})), cancel);
 		}
 
-		public void CreateDump(DumpParameters parameters)
+		public Process? CreateDump(DumpParameters parameters)
 		{
 			var proc = _runningServerProcess;
 
 			if (proc == null || proc.HasExited)
 			{
-				_logger.LogError("{Key}: ошибка при создании дампа. Отсутствует запущенный процесс.", Key);
+				_logger.LogError("{Key}: error while making process dump. No server process.", Key);
 
-				throw new Exception("Отсутствует запущенный процесс.");
+				throw new Exception("No server process.");
 			}
 
 			var dumpFile = GetDumpFilePath(parameters.Type);
 
+			ProcessStartInfo startInfo = GetDumpProcessStartInfo(parameters, proc, dumpFile);
+
+			Process? dumpProcess = null;
+
+			try
+			{
+				dumpProcess = StartDumpProcess(dumpFile, startInfo);
+
+				_logger.LogInformation("{Key}: Process dump started", Key);
+			}
+			catch (Exception exc)
+			{
+				_logger.LogError(exc, "{Key}: exception while creating process dump", Key);
+
+				dumpProcess?.Dispose();
+			}
+
+			return dumpProcess;
+		}
+
+		private ProcessStartInfo GetDumpProcessStartInfo(DumpParameters parameters, Process proc, string dumpFile)
+		{
 			var startInfo = new ProcessStartInfo
 			{
 				WorkingDirectory = InstanceDir,
@@ -638,7 +668,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 				Arguments = $"collect -p {proc.Id} -o {dumpFile}",
 			};
 
-			if (parameters.Type == Controllers.DumpType.Trace)
+			if (parameters.Type == DumpType.Trace)
 			{
 				startInfo.FileName = "dotnet-trace";
 				startInfo.Arguments += $" --duration {parameters.Duration:dd\\:hh\\:mm\\:ss}";
@@ -649,25 +679,12 @@ namespace SS14.Watchdog.Components.ServerManagement
 				startInfo.Arguments += $" -t {parameters.Duration.TotalSeconds}";
 			}
 
-			Process? dumpProcess = null;
-
-			try
-			{
-				dumpProcess = StartDumpProcess(dumpFile, startInfo);
-
-				_logger.LogInformation("{Key}: Процесс записи дампа запущен", Key);
-			}
-			catch (Exception exc) 
-			{
-				_logger.LogError(exc, "{Key}: Ошибка при записи дампа", Key);
-
-				dumpProcess?.Dispose();
-			}
+			return startInfo;
 		}
 
 		private Process StartDumpProcess(string dumpFile, ProcessStartInfo startInfo)
 		{
-			Process? dumpProcess = Process.Start(startInfo) ?? throw new Exception("Не удалось запустить процесс.");
+			var dumpProcess = Process.Start(startInfo) ?? throw new Exception("Process dump not started");
 
 			dumpProcess.WaitForExitAsync().ContinueWith(async task =>
 			{
@@ -675,18 +692,18 @@ namespace SS14.Watchdog.Components.ServerManagement
 				{
 					if (dumpProcess.ExitCode == 0)
 					{
-						_logger.LogInformation("{Key}: Дамп процесса записан в {DumpFilePath}", Key, dumpFile);
+						_logger.LogInformation("{Key}: dump write to {DumpFilePath}", Key, dumpFile);
 					}
 					else
 					{
 						var proccesOutput = await dumpProcess.StandardOutput.ReadToEndAsync();
 
-						_logger.LogInformation("{Key}: Ошибка процесса записи дампа {DumpFilePath}. {proccesOutput}", Key, dumpFile, proccesOutput);
+						_logger.LogWarning("{Key}: error while write dump {DumpFilePath}. {proccesOutput}", Key, dumpFile, proccesOutput);
 					}
 				}
 				catch (Exception exc)
 				{
-					_logger.LogError(exc, "{Key}: Ошибка при завершении процесса записи дампа", Key);
+					_logger.LogError(exc, "{Key}: exception while write dump", Key);
 				}
 				finally
 				{
@@ -695,11 +712,6 @@ namespace SS14.Watchdog.Components.ServerManagement
 			});
 
 			return dumpProcess;
-		}
-
-		private void DumpProcess_Exited(object? sender, EventArgs e)
-		{
-			throw new NotImplementedException();
 		}
 
 		[PublicAPI]
