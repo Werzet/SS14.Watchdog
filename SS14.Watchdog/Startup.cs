@@ -12,6 +12,7 @@ using Serilog;
 using SS14.Watchdog.Components.BackgroundTasks;
 using SS14.Watchdog.Components.ServerManagement;
 using SS14.Watchdog.Configuration;
+using System.Text.Json.Serialization;
 
 namespace SS14.Watchdog
 {
@@ -30,28 +31,20 @@ namespace SS14.Watchdog
 		{
 			services.Configure<ServersConfiguration>(Configuration.GetSection("Servers"));
 
-			services.AddControllers();
+			services
+				.AddControllers()
+				.AddJsonOptions(opt =>
+				{
+					opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+				});
 
 			services.AddSingleton<ServerManager>();
 			services.AddSingleton<IServerManager>(p => p.GetService<ServerManager>()!);
-			services.AddHostedService(p => p.GetRequiredService<ServerManager>());
+			services.AddHostedService(p => p.GetService<ServerManager>());
 
 			services.AddSingleton<BackgroundTaskQueue>();
 			services.AddSingleton<IBackgroundTaskQueue>(p => p.GetService<BackgroundTaskQueue>()!);
-			services.AddHostedService(p => p.GetRequiredService<BackgroundTaskQueue>());
-
-			services.AddSwaggerGen(opt =>
-			{
-				opt.CustomOperationIds(operationOpts =>
-				{
-					if (operationOpts.ActionDescriptor is ControllerActionDescriptor actionDescriptor)
-					{
-						return $"{actionDescriptor.ControllerName}_{actionDescriptor.ActionName}";
-					}
-
-					return null;
-				});
-			});
+			services.AddHostedService(p => p.GetService<BackgroundTaskQueue>());
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -61,9 +54,6 @@ namespace SS14.Watchdog
 			if (env.IsDevelopment())
 			{
 				app.UseDeveloperExceptionPage();
-
-				app.UseSwagger();
-				app.UseSwaggerUI();
 			}
 
 			app.UseSerilogRequestLogging();

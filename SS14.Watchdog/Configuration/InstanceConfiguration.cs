@@ -1,7 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
-using Microsoft.Diagnostics.NETCore.Client;
+using SS14.Watchdog.Controllers;
 
 namespace SS14.Watchdog.Configuration
 {
@@ -18,19 +18,24 @@ namespace SS14.Watchdog.Configuration
             : "bin/Robust.Server";
 
         /// <summary>
-        /// Make a heap dump if the server is killed due to timeout. Only supported on Linux.
+        /// Тип создаваемого дампа.
         /// </summary>
-        public bool DumpOnTimeout { get; set; } = true;
+        public DumpType TimeoutDumpType { get; set; } = DumpType.Gcdump | DumpType.Trace;
 
         /// <summary>
-        /// When <see cref="DumpOnTimeout"/> is on, the type of dump to make.
+        /// Максимальное время создание дампа gcdmp.
         /// </summary>
-        public DumpType TimeoutDumpType { get; set; } = DumpType.Normal;
+        public int GcdumpDumpCreateTimeout { get; set; } = 10;
+
+        /// <summary>
+        /// Время выполнения трассировки.
+        /// </summary>
+        public int TraceDumpDuration { get; set; } = 10;
 
         /// <summary>
         /// How long since the last ping before we consider the server "dead" and forcefully terminate it. In seconds.
         /// </summary>
-        public int TimeoutSeconds { get; set; } = 30;
+        public int TimeoutSeconds { get; set; } = 5;
         
         /// <summary>
         /// Any additional environment variables for the server process.
