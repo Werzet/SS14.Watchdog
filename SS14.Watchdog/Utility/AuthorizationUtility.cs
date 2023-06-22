@@ -6,7 +6,7 @@ namespace SS14.Watchdog.Utility
     public static class AuthorizationUtility
     {
         public static bool TryParseBasicAuthentication(string authorization,
-            [NotNullWhen(false)] out IActionResult? failure,
+            [NotNullWhen(false)] out ActionResult? failure,
             [NotNullWhen(true)] out string? username,
             [NotNullWhen(true)] out string? password)
         {

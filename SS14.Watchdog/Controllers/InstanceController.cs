@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using SS14.Watchdog.Components.ServerManagement;
 using SS14.Watchdog.Utility;
 
@@ -42,7 +44,7 @@ namespace SS14.Watchdog.Controllers
 		}
 
 		[HttpPost("dump")]
-		public IActionResult Dump([FromHeader(Name = "Authorization")] string authorization, string key, [FromBody]DumpParameters parameters)
+		public IActionResult Dump([FromHeader(Name = "Authorization")] string authorization, string key, [FromBody] DumpParameters parameters)
 		{
 			if (!TryAuthorize(authorization, key, out var failure, out var instance))
 			{
@@ -54,9 +56,45 @@ namespace SS14.Watchdog.Controllers
 			return Ok();
 		}
 
+		[HttpGet("dump/{fileName}")]
+		public IActionResult GetDump([FromHeader(Name = "Authorization")] string authorization, string key, string fileName)
+		{
+			if (!TryAuthorize(authorization, key, out var failure, out var instance))
+			{
+				return failure;
+			}
+
+			string filePath = instance.GetDump(fileName);
+
+			if (string.IsNullOrWhiteSpace(filePath))
+			{
+				return NotFound();
+			}
+
+			var mime = new FileExtensionContentTypeProvider();
+
+			if (!mime.TryGetContentType(filePath, out var type))
+			{
+				type = "application/octet-stream";
+			}
+
+			return PhysicalFile(filePath, type);
+		}
+
+		[HttpGet("dumps")]
+		public ActionResult<IEnumerable<string>> GetDumps([FromHeader(Name = "Authorization")] string authorization, string key)
+		{
+			if (!TryAuthorize(authorization, key, out var failure, out var instance))
+			{
+				return failure;
+			}
+
+			return Ok(instance.GetDumps());
+		}
+
 		private bool TryAuthorize(string authorization,
 			string key,
-			[NotNullWhen(false)] out IActionResult? failure,
+			[NotNullWhen(false)] out ActionResult? failure,
 			[NotNullWhen(true)] out IServerInstance? instance)
 		{
 			instance = null;

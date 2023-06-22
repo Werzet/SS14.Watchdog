@@ -35,7 +35,7 @@ namespace SS14.Watchdog.Controllers
         [NonAction]
         public bool TryAuthorize(string authorization,
             string key,
-            [NotNullWhen(false)] out IActionResult? failure,
+            [NotNullWhen(false)] out ActionResult? failure,
             [NotNullWhen(true)] out IServerInstance? instance)
         {
             instance = null;

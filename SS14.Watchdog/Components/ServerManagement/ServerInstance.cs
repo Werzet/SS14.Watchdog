@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -64,6 +66,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 		private DateTime? _lastPing;
 		private CancellationTokenSource? _serverTimeoutTcs;
+
+		private string TraceDumpExtension => ".nettrace";
+		private string GcdumpDumpExtension => ".gcdump";
+
 
 		public ServerInstance(
 			string key,
@@ -383,6 +389,8 @@ namespace SS14.Watchdog.Components.ServerManagement
 		public string InstanceDir =>
 			Path.Combine(Environment.CurrentDirectory, _serversConfiguration.InstanceRoot, Key);
 
+		private string DumpDir => Path.Combine(InstanceDir, "dumps");
+
 		public async Task ShutdownAsync(CancellationToken cancellationToken)
 		{
 			_shuttingDown = true;
@@ -505,13 +513,13 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 		private string GetDumpFilePath(DumpType? dumpType)
 		{
-			var dumpDir = Path.Combine(InstanceDir, "dumps");
+			var dumpDir = DumpDir;
 			Directory.CreateDirectory(dumpDir);
 
 			var fileExt = dumpType switch
 			{
-				DumpType.Trace => ".nettrace",
-				DumpType.Gcdump => ".gcdump",
+				DumpType.Trace => TraceDumpExtension,
+				DumpType.Gcdump => GcdumpDumpExtension,
 				_ => string.Empty
 			};
 			
@@ -713,6 +721,47 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 			return dumpProcess;
 		}
+
+		public string GetDump(string fileName)
+		{
+			var dumpDir = DumpDir;
+
+			if (!Directory.Exists(dumpDir))
+			{
+				_logger.LogWarning("{Key}: Dump directory doesn't exist", Key);
+
+				return string.Empty;
+			}
+
+			var filePath = Path.Combine(dumpDir, fileName);
+
+			if (!File.Exists(filePath))
+			{
+				_logger.LogWarning("{Key}: Dump file doesn't exist", Key);
+
+				return string.Empty;
+			}
+
+			return filePath;
+		}
+
+		public IEnumerable<string> GetDumps()
+		{
+			var dumpDir = DumpDir;
+
+			if (!Directory.Exists(dumpDir))
+			{
+				_logger.LogWarning("{Key}: Dump directory doesn't exist", Key);
+
+				return Enumerable.Empty<string>();
+			}
+
+			return Directory
+				.GetFiles(dumpDir)
+				.Where(x => x.EndsWith(TraceDumpExtension) || x.EndsWith(GcdumpDumpExtension))
+				.Select(x => Path.GetFileName(x));
+		}
+
 
 		[PublicAPI]
 		private sealed class ShutdownParameters
