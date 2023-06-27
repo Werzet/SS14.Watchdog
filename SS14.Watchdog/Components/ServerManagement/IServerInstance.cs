@@ -70,5 +70,6 @@ namespace SS14.Watchdog.Components.ServerManagement
 		/// <param name="parameters">Параметры создания дампа.</param>
 		/// <returns>Процесс создания дампа.</returns>
 		Process? CreateDump(DumpParameters parameters);
+		void CreateConfigParameter(string table, string key, string value);
 	}
 }

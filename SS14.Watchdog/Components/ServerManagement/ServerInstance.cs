@@ -19,7 +19,7 @@ using SS14.Watchdog.Controllers;
 
 namespace SS14.Watchdog.Components.ServerManagement
 {
-	public sealed class ServerInstance : IServerInstance
+	public sealed partial class ServerInstance : IServerInstance
 	{
 		/// <summary>
 		///     How many times the server can shut down before sending a ping before we stop trying to restart it.
