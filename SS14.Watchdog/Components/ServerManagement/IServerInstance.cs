@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using SS14.Watchdog.Controllers;
@@ -70,5 +71,18 @@ namespace SS14.Watchdog.Components.ServerManagement
 		/// <param name="parameters">Параметры создания дампа.</param>
 		/// <returns>Процесс создания дампа.</returns>
 		Process? CreateDump(DumpParameters parameters);
+
+		/// <summary>
+		/// Возвращает путь к файлу дампа по имени файла.
+		/// </summary>
+		/// <param name="fileName">Имя файла, который нужно найти.</param>
+		/// <returns></returns>
+		string GetDump(string fileName);
+
+		/// <summary>
+		/// Возвращает список существующих дампов.
+		/// </summary>
+		/// <returns></returns>
+		IEnumerable<string> GetDumps();
 	}
 }
