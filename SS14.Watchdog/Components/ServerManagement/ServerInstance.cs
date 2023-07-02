@@ -42,7 +42,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		///     How long since the last ping before we consider the server "dead" and forcefully terminate it.
 		/// </summary>
 		private TimeSpan PingTimeoutDelay => TimeSpan.FromSeconds(_instanceConfig.TimeoutSeconds);
-		
+
 		private readonly SemaphoreSlim _stateLock = new SemaphoreSlim(1, 1);
 
 		private readonly HttpClient _serverHttpClient = new HttpClient();
@@ -60,6 +60,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 		// Set when the server keeps failing to start so we wait for an update to come in to fix it.
 		private bool _startupFailUpdateWait;
+
 		private int _loadFailCount;
 
 		private Process? _runningServerProcess;
@@ -71,11 +72,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 		private string TraceDumpExtension => ".nettrace";
 		private string GcdumpDumpExtension => ".gcdump";
 
-
 		public ServerInstance(
 			string key,
 			InstanceConfiguration instanceConfig,
-			IConfiguration configuration, 
+			IConfiguration configuration,
 			ServersConfiguration serversConfiguration,
 			ILogger<ServerInstance> logger,
 			IBackgroundTaskQueue taskQueue,
@@ -95,56 +95,56 @@ namespace SS14.Watchdog.Components.ServerManagement
 						.GetSection($"Servers:Instances:{key}:Updates")
 						.Get<UpdateProviderJenkinsConfiguration>();
 
-                    if (jenkinsConfig == null)
-                        throw new InvalidOperationException("Invalid configuration!");
-                    
-                    _updateProvider = new UpdateProviderJenkins(
-                        jenkinsConfig, 
-                        serviceProvider.GetRequiredService<ILogger<UpdateProviderJenkins>>());
-                    break;
+					if (jenkinsConfig == null)
+						throw new InvalidOperationException("Invalid configuration!");
+
+					_updateProvider = new UpdateProviderJenkins(
+						jenkinsConfig,
+						serviceProvider.GetRequiredService<ILogger<UpdateProviderJenkins>>());
+					break;
 
 				case "Local":
 					var localConfig = configuration
 						.GetSection($"Servers:Instances:{key}:Updates")
 						.Get<UpdateProviderLocalConfiguration>();
 
-                    if (localConfig == null)
-                        throw new InvalidOperationException("Invalid configuration!");
-                    
-                    _updateProvider = new UpdateProviderLocal(
-                        this,
-                        localConfig, 
-                        serviceProvider.GetRequiredService<ILogger<UpdateProviderLocal>>(),
-                        configuration);
-                    break;
-                
-                case "Git":
-                    var gitConfig = configuration
-                        .GetSection($"Servers:Instances:{key}:Updates")
-                        .Get<UpdateProviderGitConfiguration>();
+					if (localConfig == null)
+						throw new InvalidOperationException("Invalid configuration!");
 
-                    if (gitConfig == null)
-                        throw new InvalidOperationException("Invalid configuration!");
+					_updateProvider = new UpdateProviderLocal(
+						this,
+						localConfig,
+						serviceProvider.GetRequiredService<ILogger<UpdateProviderLocal>>(),
+						configuration);
+					break;
 
-                    _updateProvider = new UpdateProviderGit(
-                        this,
-                        gitConfig,
-                        serviceProvider.GetRequiredService<ILogger<UpdateProviderGit>>(),
-                        configuration);
-                    break;
-                
-                case "Manifest":
-                    var manifestConfig = configuration
-                        .GetSection($"Servers:Instances:{key}:Updates")
-                        .Get<UpdateProviderManifestConfiguration>();
-                    
-                    if (manifestConfig == null)
-                        throw new InvalidOperationException("Invalid configuration!");
+				case "Git":
+					var gitConfig = configuration
+						.GetSection($"Servers:Instances:{key}:Updates")
+						.Get<UpdateProviderGitConfiguration>();
 
-                    _updateProvider = new UpdateProviderManifest(
-                        manifestConfig,
-                        serviceProvider.GetRequiredService<ILogger<UpdateProviderManifest>>());
-                    break;
+					if (gitConfig == null)
+						throw new InvalidOperationException("Invalid configuration!");
+
+					_updateProvider = new UpdateProviderGit(
+						this,
+						gitConfig,
+						serviceProvider.GetRequiredService<ILogger<UpdateProviderGit>>(),
+						configuration);
+					break;
+
+				case "Manifest":
+					var manifestConfig = configuration
+						.GetSection($"Servers:Instances:{key}:Updates")
+						.Get<UpdateProviderManifestConfiguration>();
+
+					if (manifestConfig == null)
+						throw new InvalidOperationException("Invalid configuration!");
+
+					_updateProvider = new UpdateProviderManifest(
+						manifestConfig,
+						serviceProvider.GetRequiredService<ILogger<UpdateProviderManifest>>());
+					break;
 
 				case "Dummy":
 					_updateProvider = new UpdateProviderDummy();
@@ -171,7 +171,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		{
 			_instanceConfig = cfg;
 		}
-		
+
 		private void LoadData()
 		{
 			var dataPath = Path.Combine(InstanceDir, "data.json");
@@ -247,7 +247,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 						var newRevision = await _updateProvider.RunUpdateAsync(
 							_currentRevision,
 							Path.Combine(InstanceDir, "bin"));
-						
+
 						if (newRevision != null)
 						{
 							_logger.LogDebug("Updated from {current} to {new}.",
@@ -327,7 +327,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 				var exitTask = _runningServerProcess.WaitForExitAsync();
 
-				StartTimeoutTimer();
+				_ = StartTimeoutTimer();
 
 				await exitTask;
 
@@ -379,10 +379,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 			}
 		}
 
-        private void GenerateNewToken()
-        {
-            Span<byte> raw = stackalloc byte[64];
-            RandomNumberGenerator.Fill(raw);
+		private void GenerateNewToken()
+		{
+			Span<byte> raw = stackalloc byte[64];
+			RandomNumberGenerator.Fill(raw);
 
 			var token = Convert.ToBase64String(raw);
 			Secret = token;
@@ -435,8 +435,8 @@ namespace SS14.Watchdog.Components.ServerManagement
 				_logger.LogTrace("Received ping from server.");
 				_lastPing = DateTime.Now;
 
-                // Т.к. ожидание тайм-аута процесса построено на ожидании, то процесс ожидания запускаем и не дожидаемся его.
-                _ = StartTimeoutTimer();
+				// Т.к. ожидание тайм-аута процесса построено на ожидании, то процесс ожидания запускаем и не дожидаемся его.
+				_ = StartTimeoutTimer();
 			}
 			finally
 			{
@@ -482,7 +482,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 			if (_runningServerProcess == null)
 				return;
-			
+
 			if (_instanceConfig.TimeoutDumpType.HasFlag(DumpType.Trace))
 			{
 				await ProcessDump(DumpType.Trace, TimeSpan.FromSeconds(_instanceConfig.TraceDumpDuration));
@@ -534,7 +534,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 				DumpType.Gcdump => GcdumpDumpExtension,
 				_ => string.Empty
 			};
-			
+
 			return Path.Combine(dumpDir, $"dump_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}{fileExt}");
 		}
 
