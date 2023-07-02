@@ -435,8 +435,8 @@ namespace SS14.Watchdog.Components.ServerManagement
 				_logger.LogTrace("Received ping from server.");
 				_lastPing = DateTime.Now;
 
-				// �.�. �������� ����-���� �������� ��������� �� ��������, �� ������� �������� ��������� � �� ���������� ���.
-				_ = StartTimeoutTimer();
+                // Т.к. ожидание тайм-аута процесса построено на ожидании, то процесс ожидания запускаем и не дожидаемся его.
+                _ = StartTimeoutTimer();
 			}
 			finally
 			{
