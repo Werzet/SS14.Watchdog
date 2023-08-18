@@ -45,6 +45,18 @@ namespace SS14.Watchdog
 			services.AddSingleton<BackgroundTaskQueue>();
 			services.AddSingleton<IBackgroundTaskQueue>(p => p.GetService<BackgroundTaskQueue>()!);
 			services.AddHostedService(p => p.GetService<BackgroundTaskQueue>());
+
+			services.AddSwaggerGen(opt =>
+			{
+				opt.CustomOperationIds(operationOpts =>
+				{
+					if (operationOpts.ActionDescriptor is ControllerActionDescriptor actionDescriptor)
+					{
+						return $"{actionDescriptor.ControllerName}_{actionDescriptor.ActionName}";
+					}
+					return null;
+				});
+			});
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -54,6 +66,9 @@ namespace SS14.Watchdog
 			if (env.IsDevelopment())
 			{
 				app.UseDeveloperExceptionPage();
+
+				app.UseSwagger();
+				app.UseSwaggerUI();
 			}
 
 			app.UseSerilogRequestLogging();
