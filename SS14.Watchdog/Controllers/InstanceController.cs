@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -90,6 +91,25 @@ namespace SS14.Watchdog.Controllers
 			}
 
 			return Ok(instance.GetDumps());
+		}
+
+		[HttpPost("execute-command")]
+		public async Task<IActionResult> ExecuteCommand([FromHeader(Name = "Authorization")] string authorization, string key, [FromBody] ExecuteCommandParameters parameters, CancellationToken cancellationToken)
+		{
+			if (!TryAuthorize(authorization, key, out var failure, out var instance))
+			{
+				return failure;
+			}
+
+			var result = await instance.ExecuteCommand(parameters.Command, cancellationToken);
+
+			var contentRes = new ContentResult
+			{
+				StatusCode = (int)result.StatusCode,
+				Content = await result.Content.ReadAsStringAsync(cancellationToken),
+				ContentType = "application/text"
+			};
+			return contentRes;
 		}
 
 		private bool TryAuthorize(string authorization,
