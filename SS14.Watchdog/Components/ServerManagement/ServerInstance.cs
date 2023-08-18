@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
@@ -762,6 +763,18 @@ namespace SS14.Watchdog.Components.ServerManagement
 				.Select(x => Path.GetFileName(x));
 		}
 
+		public async Task<HttpResponseMessage> ExecuteCommand(string command, CancellationToken cancel)
+		{
+			var resp = await _serverHttpClient.PostAsync($"http://localhost:{_instanceConfig.ApiPort}/console-command",
+				new StringContent(JsonSerializer.Serialize(command)), cancel);
+
+			if (!resp.IsSuccessStatusCode)
+			{
+				_logger.LogWarning("Bad HTTP status code on console-command: {status}", resp.StatusCode);
+			}
+
+			return resp;
+		}
 
 		[PublicAPI]
 		private sealed class ShutdownParameters

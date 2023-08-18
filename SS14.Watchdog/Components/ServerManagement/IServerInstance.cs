@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using SS14.Watchdog.Controllers;
@@ -84,5 +85,6 @@ namespace SS14.Watchdog.Components.ServerManagement
 		/// </summary>
 		/// <returns></returns>
 		IEnumerable<string> GetDumps();
+		Task<HttpResponseMessage> ExecuteCommand(string command, CancellationToken cancel);
 	}
 }
