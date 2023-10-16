@@ -134,6 +134,19 @@ namespace SS14.Watchdog.Controllers
 			return await GetContentResponse(result, cancellationToken);
 		}
 
+		[HttpPost("shutdown")]
+		public async Task<IActionResult> Shutdown([FromHeader(Name = "Authorization")] string authorization, string key, CancellationToken cancellationToken)
+		{
+			if (!TryAuthorize(authorization, key, out var failure, out var instance))
+			{
+				return failure;
+			}
+
+			await instance.ShutdownAsync(cancellationToken);
+
+			return Ok();
+		}
+
 		private bool TryAuthorize(string authorization,
 			string key,
 			[NotNullWhen(false)] out ActionResult? failure,

@@ -64,6 +64,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		Task SendShutdownNotificationAsync(CancellationToken cancel = default);
 
 		Task ForceShutdownServerAsync(CancellationToken cancel = default);
+		Task ShutdownAsync(CancellationToken cancellationToken = default);
 		Task DoRestartCommandAsync(CancellationToken cancel = default);
 
 		/// <summary>

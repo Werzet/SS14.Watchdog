@@ -269,6 +269,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 
 			GenerateNewToken();
 
+			_shuttingDown = false;
 			_lastPing = null;
 
 			_logger.LogTrace("Getting launch info...");
@@ -407,6 +408,7 @@ namespace SS14.Watchdog.Components.ServerManagement
 		public async Task ShutdownAsync(CancellationToken cancellationToken)
 		{
 			_shuttingDown = true;
+			_startupFailUpdateWait = true;
 
 			await _stateLock.WaitAsync(cancellationToken);
 			try
@@ -426,6 +428,8 @@ namespace SS14.Watchdog.Components.ServerManagement
 			{
 				_stateLock.Release();
 			}
+
+			_runningServerProcess = null;
 		}
 
 		public async Task PingReceived()
@@ -466,7 +470,10 @@ namespace SS14.Watchdog.Components.ServerManagement
 				_logger.LogTrace("Timeout broken, it lives.");
 				return;
 			}
-
+			if (_shuttingDown)
+			{
+				return;
+			}
 			try
 			{
 				await TimeoutKill();
