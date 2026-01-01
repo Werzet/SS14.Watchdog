@@ -1,6 +1,8 @@
-using System.Net.Http;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using SS14.Watchdog.Components.ServerManagement.ApiModels;
 
 namespace SS14.Watchdog.Components.ServerManagement
 {
@@ -73,6 +75,19 @@ namespace SS14.Watchdog.Components.ServerManagement
         /// The server will be asked to gracefully shut down via the <c>/update</c> end point.
         /// </remarks>
         Task DoStopCommandAsync(ServerInstanceStopCommand stopCommand, CancellationToken cancel = default);
+
+        /// <summary>
+        ///     Return instance replays list.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<ReplayFileInfo> GetReplays();
+
+        /// <summary>
+        ///     Return instance replay.
+        /// </summary>
+        /// <param name="fileName">Replay file name to get.</param>
+        /// <returns></returns>
+        Stream? GetReplay(string fileName);
     }
 
     /// <summary>

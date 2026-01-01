@@ -1,10 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SS14.Watchdog.Components.ServerManagement;
 using SS14.Watchdog.Utility;
-using SIOFile = System.IO.File;
 
 namespace SS14.Watchdog.Controllers
 {
@@ -64,6 +62,35 @@ namespace SS14.Watchdog.Controllers
             }
 
             return await instance.GetServerStatusAsync();
+        }
+
+        [HttpGet("replays")]
+        public IActionResult GetReplays([FromHeader(Name = "Authorization")] string authorization, string key)
+        {
+            if (!TryAuthorize(authorization, key, out var failure, out var instance))
+            {
+                return failure;
+            }
+
+            return Ok(instance.GetReplays());
+        }
+
+        [HttpGet("replays/{fileName}")]
+        public IActionResult GetReplay([FromHeader(Name = "Authorization")] string authorization, string key, string fileName)
+        {
+            if (!TryAuthorize(authorization, key, out var failure, out var instance))
+            {
+                return failure;
+            }
+
+            var replay = instance.GetReplay(fileName);
+
+            if (replay is null)
+            {
+                return NotFound();
+            }
+
+            return File(replay, "application/octet-stream");
         }
 
         [NonAction]
